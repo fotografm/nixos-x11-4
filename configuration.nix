@@ -23,12 +23,15 @@
   networking.hostName = "x11-4";
 
   # Static IP on 192.168.8.0/24
-  # Verify interface name with `ip -brief link` on the live env
-  # and change `eno1` below if needed.
+  # eno1 is enslaved to br0 so Incus containers/VMs can sit on the real LAN.
+  # The host's IP lives on br0, not eno1.
+  # Verify NIC name with `ip -brief link` and change `eno1` if needed.
   networking.useDHCP = false;
   networking.networkmanager.enable = false;
 
-  networking.interfaces.eno1.ipv4.addresses = [{
+  networking.bridges.br0.interfaces = [ "eno1" ];
+
+  networking.interfaces.br0.ipv4.addresses = [{
     address = "192.168.8.50";
     prefixLength = 24;
   }];
