@@ -42,8 +42,46 @@
   # Incus requires nftables (not iptables) on NixOS
   networking.nftables.enable = true;
 
-  # Incus itself
-  virtualisation.incus.enable = true;
+  # Open the Incus HTTPS API/UI port so pavi-mint can reach it
+  networking.firewall.allowedTCPPorts = [ 22 8443 ];
+
+  # Incus itself, declaratively initialised.
+  # Uses /dev/sda3 as a btrfs storage pool, and attaches the default
+  # profile's eth0 to br0 so containers/VMs get IPs from the LAN DHCP.
+  # No incusbr0 (NATted bridge) is created.
+  virtualisation.incus = {
+    enable = true;
+    ui.enable = true;
+    preseed = {
+      storage_pools = [
+        {
+          name = "default";
+          driver = "btrfs";
+          config = {
+            source = "/dev/sda3";
+          };
+        }
+      ];
+      profiles = [
+        {
+          name = "default";
+          devices = {
+            root = {
+              path = "/";
+              pool = "default";
+              type = "disk";
+            };
+            eth0 = {
+              name = "eth0";
+              nictype = "bridged";
+              parent = "br0";
+              type = "nic";
+            };
+          };
+        }
+      ];
+    };
+  };
 
   # Locale / time
   time.timeZone = "Europe/London";
