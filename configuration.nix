@@ -106,6 +106,10 @@
     settings.PasswordAuthentication = true;
   };
 
+  # Tailscale — joins the tailnet as a regular node.
+  # No subnet routing here (ct106/vm101/s740-c38 handle that already).
+  services.tailscale.enable = true;
+
   # Minimal toolset
   environment.systemPackages = with pkgs; [
     vim
