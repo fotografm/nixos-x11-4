@@ -88,13 +88,24 @@
   i18n.defaultLocale = "en_GB.UTF-8";
 
   # User
+  # Declarative user/password management - required for hashedPassword(File)
+  # to actually be enforced on rebuild instead of being ignored for
+  # already-existing accounts.
+  users.mutableUsers = false;
   users.users.user = {
     isNormalUser = true;
     extraGroups = [ "wheel" "incus-admin" ];
     openssh.authorizedKeys.keys = [
-      # "ssh-ed25519 AAAA... user@h510"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICyv13iuXAo7+Sf9aZXHGM/yP0786ir/2g5QqlTlb1QE t480a"
     ];
+    # Fallback password login for cases where no trusted machine has this
+    # host's key yet. Hash lives only on the server, never in this repo -
+    # this repo (public) only ever references the file path.
+    hashedPasswordFile = "/etc/nixos/secrets/user-password-hash";
   };
+
+  # Root has no password and cannot log in over SSH - use 'user' + sudo.
+  users.users.root.hashedPassword = "!";
 
   # Allow wheel sudo without password (convenient on a test box)
   security.sudo.wheelNeedsPassword = false;
@@ -102,7 +113,7 @@
   # SSH
   services.openssh = {
     enable = true;
-    settings.PermitRootLogin = "yes";
+    settings.PermitRootLogin = "no";
     settings.PasswordAuthentication = true;
   };
 

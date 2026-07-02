@@ -27,10 +27,10 @@ github.com/fotografm/nixos-x11-4   ← GitHub backup / history
 
 ## How to make a config change
 
-1. SSH into x11-4:
+1. SSH into x11-4 (root login is disabled - use `user` + sudo):
 
 ```
-ssh root@192.168.8.50
+ssh user@192.168.8.50
 ```
 
 2. Edit the config:
@@ -71,6 +71,34 @@ nixos-rebuild switch --rollback
 
 ---
 
+## Password storage
+
+`user` has a password-based SSH fallback (`PasswordAuthentication = true`) for
+logging in from a machine that doesn't have this host's key trusted yet.
+
+The password hash is **never committed to this repo** (it's public) - it lives
+only on the machine, at `/etc/nixos/secrets/user-password-hash`, which is
+`.gitignore`'d and root-only readable (`chmod 600`). `configuration.nix` only
+ever references the file *path* via `hashedPasswordFile`.
+
+To set or rotate the password:
+
+```
+mkpasswd -m sha-512 | sudo tee /etc/nixos/secrets/user-password-hash > /dev/null
+sudo chmod 600 /etc/nixos/secrets/user-password-hash
+sudo nixos-rebuild switch --flake /etc/nixos#x11-4
+```
+
+`root` has no password at all (`hashedPassword = "!"`) and `PermitRootLogin =
+"no"` - root cannot log in over SSH under any circumstances. Use `user` + sudo
+(passwordless for the `wheel` group) instead.
+
+This requires `users.mutableUsers = false;`. Without it, NixOS does not
+enforce a declared password onto an account that already has one set outside
+of config (e.g. from the installer) - it's only applied on first creation.
+
+---
+
 ## Repository layout
 
 ```
@@ -94,7 +122,7 @@ directly on the machine.
 | Hostname | `x11-4` |
 | IP | `192.168.8.50` |
 | Role | Incus hypervisor (containers + VMs) |
-| SSH | `ssh root@192.168.8.50` |
+| SSH | `ssh user@192.168.8.50` |
 | Incus UI | `https://192.168.8.50:8443` |
 | NixOS | 26.05 (Yarara) |
 | Incus | feature release |
@@ -184,10 +212,12 @@ umount -R /mnt && reboot
 ### 6 — Post-install: make /etc/nixos a git repo
 
 After booting into the new system, set up `/etc/nixos/` as a proper git repo
-pointing at GitHub so future changes can be pushed:
+pointing at GitHub so future changes can be pushed. Root login is disabled, so
+SSH in as `user` and get a root shell via sudo for these root-owned files:
 
 ```
-ssh root@192.168.8.50
+ssh user@192.168.8.50
+sudo -i
 cd /etc/nixos
 git init -b main
 git remote add origin git@github.com:fotografm/nixos-x11-4.git
